@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 
 #[derive(Ord, PartialOrd, Eq, PartialEq, Debug, Hash)]
 /// A representation of a location within the FFXIV data files. This is an
@@ -72,6 +73,19 @@ impl AsRef<SqPath> for String {
 
 impl AsRef<SqPath> for SqPathBuf {
     fn as_ref(&self) -> &SqPath { self.inner.as_ref() }
+}
+
+impl ToOwned for SqPath {
+    type Owned = SqPathBuf;
+    fn to_owned(&self) -> Self::Owned {
+        SqPathBuf::new(&self.inner)
+    }
+}
+
+impl Borrow<SqPath> for SqPathBuf {
+    fn borrow(&self) -> &SqPath {
+        SqPath::new(&self.inner)
+    }
 }
 
 #[cfg(test)]
