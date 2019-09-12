@@ -92,6 +92,7 @@ impl Borrow<SqPath> for SqPathBuf {
 mod sqpath_tests {
     use SqPath;
     use sqpath::SqPathBuf;
+    use std::borrow::Borrow;
 
     #[test]
     fn basic_sqpath() {
@@ -124,5 +125,15 @@ mod sqpath_tests {
         SqPathBuf::new("uwu");
         let s = String::from("uwu");
         SqPathBuf::new(&s);
+    }
+
+    #[test]
+    fn to_owned_and_borrow() {
+        let sqpath = SqPath::new("uwu");
+        let a: SqPathBuf = sqpath.to_owned();
+        assert_eq!(a.inner, sqpath.inner);
+
+        let x: &SqPath = a.borrow();
+        assert_eq!(x.inner, a.inner);
     }
 }
