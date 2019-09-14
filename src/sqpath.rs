@@ -138,6 +138,7 @@ impl Borrow<SqPath> for SqPathBuf {
 mod sqpath_tests {
     use SqPath;
     use sqpath::SqPathBuf;
+    use std::borrow::Borrow;
 
     #[test]
     fn basic_sqpath() {
@@ -178,5 +179,15 @@ mod sqpath_tests {
         let sq_index_path = sq_path.get_sq_index_path().expect("Path was not well formed");
         assert_eq!(sq_index_path.folder_hash, 0x0AF269D6);
         assert_eq!(sq_index_path.file_hash, 0xE3B71579)
+    }
+
+    #[test]
+    fn to_owned_and_borrow() {
+        let sqpath = SqPath::new("uwu");
+        let a: SqPathBuf = sqpath.to_owned();
+        assert_eq!(a.inner, sqpath.inner);
+
+        let x: &SqPath = a.borrow();
+        assert_eq!(x.inner, a.inner);
     }
 }
