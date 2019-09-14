@@ -13,6 +13,8 @@
 
 pub mod sqpath;
 pub mod io;
+pub mod hash;
+mod hash_consts;
 
 pub use io::{
     SqpackError,
