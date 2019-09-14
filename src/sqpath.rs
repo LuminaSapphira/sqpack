@@ -74,6 +74,17 @@ impl SqPathBuf {
     pub fn new<S: AsRef<str> + ?Sized>(s: &S) -> SqPathBuf {
         SqPathBuf { inner: String::from(s.as_ref()) }
     }
+
+    /// Gets the SqIndexPath of the file. This struct allows you to locate
+    /// a specific file within the index, as the index files are all encoded
+    /// based on a specific hash of the file and folder name.
+    ///
+    /// # Returns
+    /// `Some(...)` if the path was a valid SqIndex path, `None` otherwise. Note:
+    /// this does not verify if the file is in the Sqpack, just if the path was well-formed.
+    pub fn get_sq_index_path(&self) -> Option<SqIndexPath> {
+        self.as_ref().get_sq_index_path()
+    }
 }
 
 /// A simple struct that names the parts of an Sqpack Index file path
@@ -178,7 +189,12 @@ mod sqpath_tests {
         let sq_path = SqPath::new("music/ffxiv/BGM_System_Title.scd");
         let sq_index_path = sq_path.get_sq_index_path().expect("Path was not well formed");
         assert_eq!(sq_index_path.folder_hash, 0x0AF269D6);
-        assert_eq!(sq_index_path.file_hash, 0xE3B71579)
+        assert_eq!(sq_index_path.file_hash, 0xE3B71579);
+
+        let sq_pathbuf: SqPathBuf = sq_path.to_owned();
+        let sq_index_path = sq_pathbuf.get_sq_index_path().expect("Path was not well formed");
+        assert_eq!(sq_index_path.folder_hash, 0x0AF269D6);
+        assert_eq!(sq_index_path.file_hash, 0xE3B71579);
     }
 
     #[test]

@@ -1,3 +1,4 @@
+#![deny(unused_extern_crates, unused_must_use)]
 
 //! A simple crate for reading the data files of FFXIV.
 //!
@@ -11,8 +12,13 @@
 //! function in the `io` module, along with a path to the data files, to
 //! open `Read` streams.
 
+/// Types and functions related to locating data within the Sqpack
 pub mod sqpath;
+
+/// Types and functions related to reading data from the Sqpack
 pub mod io;
+
+/// Functions relating to hashing data in the same way as FFXIV to assist locating files.
 pub mod hash;
 mod hash_consts;
 

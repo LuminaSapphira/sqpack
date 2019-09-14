@@ -2,6 +2,7 @@
 use std::error::Error;
 use std::fmt::{Debug, Result as FmtResult, Formatter, Display};
 
+/// Types and functions relating to opening and reading specific files within the Sqpack
 pub mod sqfile;
 
 /// Errors specific to Sqpack I/O
