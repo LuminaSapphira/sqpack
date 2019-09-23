@@ -12,6 +12,8 @@
 //! function in the `io` module, along with a path to the data files, to
 //! open `Read` streams.
 
+extern crate byteorder;
+
 /// Types and functions related to locating data within the Sqpack
 pub mod sqpath;
 
@@ -24,6 +26,7 @@ mod hash_consts;
 
 pub use io::{
     SqpackError,
+    SqResult,
     sqfile::SqFile
 };
 pub use sqpath::{
