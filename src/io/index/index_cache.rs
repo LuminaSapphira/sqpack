@@ -4,17 +4,17 @@ use sqpath::{FileType, Expansion};
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct IndexCache {
-    folders: HashMap<u32, IndexFolder>,
+    folders: HashMap<u32, IndexFolderEntry>,
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct IndexFolder {
+pub struct IndexFolderEntry {
     pub folder_hash: u32,
-    files: HashMap<u32, IndexFile>,
+    files: HashMap<u32, IndexFileEntry>,
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
-pub struct IndexFile {
+pub struct IndexFileEntry {
     pub folder_hash: u32,
     pub file_hash: u32,
     pub data_offset: u32,

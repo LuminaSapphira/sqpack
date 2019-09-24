@@ -4,7 +4,6 @@ use crate::{
 };
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
-use std::ffi::OsStr;
 
 #[derive(Ord, PartialOrd, Eq, PartialEq, Debug, Hash)]
 /// A representation of a location within the FFXIV data files. This is an
@@ -106,6 +105,8 @@ impl SqPath {
 
 #[derive(Ord, PartialOrd, PartialEq, Eq, Debug, Hash, Clone)]
 /// An owned, sized representation of a location within the FFXIV data files.
+/// It implements `Deref<SqPath>` so you can call all the same functions as
+/// `SqPath`.
 pub struct SqPathBuf {
     inner: String
 }

@@ -1,42 +1,60 @@
-use std::io::{Read, Seek, SeekFrom, BufRead, BufReader};
-use std::fs::File;
-use SqResult;
+use std::io::{Read, Seek, SeekFrom, BufReader};
+use ::{SqResult, SqpackError};
 use crate::byteorder::{ReadBytesExt, LE};
-use io::index::IndexFile;
+use io::index::IndexFileEntry;
 
-/// Reads the header length from a `Read` mutable reference. `file` should be an
-/// opened .win32.index file from the SqPack, or other comparable read instance.
-///
-/// # Returns
-/// The header length wrapped in a result. The file reference is mutated in that its cursor
-/// position may be different.
-pub fn header_length<F: Read + Seek>(file: &mut F) -> SqResult<u32> {
-    file.seek(SeekFrom::Start(0x0c))?;
-    let len = file.read_u32::<LE>()?;
-    Ok(len)
-}
-
+/// A buffered reader that reads index files from a wrapped `Read` instance
 pub struct IndexReader<R>
     where R: Read + Seek + Sized
 {
     inner: BufReader<R>,
 }
 
+/// An iterator struct over the files present in the passed IndexReader
 pub struct IndexFiles<R: Read + Seek + Sized> {
     pub reader: IndexReader<R>,
 }
 
+/// The expected signature of SqPack Files
+const SQPACK_SIGNATURE: [u8; 6] = [0x53,0x71,0x50,0x61,0x63,0x6b];
+
+/// The expected type ID of SqPack index files
+const SQPACK_INDEX_TYPE: u8 = 2;
+
 impl<R: Read + Seek + Sized> IndexReader<R> {
 
-    pub fn new(inner: R) -> Self {
-        IndexReader{ inner: BufReader::new(inner) }
+    /// Accepts a `Read + Seek` and wraps an `IndexReader` around it.
+    ///
+    /// # Returns
+    /// `Ok(IndexReader)` if `inner` was a `Read` over a SqPack index file
+    /// `Err(...)` if an I/O error occurred or if `inner` was not a `Read` over a SqPack index file.
+    pub fn new(inner: R) -> SqResult<Self> {
+        let mut buf = BufReader::new(inner);
+        let mut sq_sig_buffer = [0; 6];
+        buf.read_exact(&mut sq_sig_buffer)?;
+        if sq_sig_buffer.as_ref() == SQPACK_SIGNATURE.as_ref() {
+            buf.seek(SeekFrom::Start(0x14))?;
+            let sqtype = buf.read_u8()?;
+            if sqtype == SQPACK_INDEX_TYPE {
+                Ok(IndexReader{inner: buf})
+            } else {
+                Err(SqpackError::ReaderIsNotIndex)
+            }
+        } else {
+            Err(SqpackError::ReaderIsNotSqPack)
+        }
     }
 
+    /// Reads the header length from the internal reader.
+    ///
+    /// # Returns
+    /// The header length wrapped in a result.
     pub fn header_length(&mut self) -> SqResult<u32> {
         self.inner.seek(SeekFrom::Start(0x0c))?;
         Ok(self.inner.read_u32::<LE>()?)
     }
 
+    /// Consumes the reader, yielding an iterator over the files present in the index.
     pub fn files(self) -> SqResult<IndexFiles<R>> {
         let mut s = self;
         let len = s.header_length()?;
@@ -51,7 +69,7 @@ impl<R: Read + Seek + Sized> IndexReader<R> {
 }
 
 impl<R: Read + Seek + Sized> Iterator for IndexFiles<R> {
-    type Item = IndexFile;
+    type Item = IndexFileEntry;
     fn next(&mut self) -> Option<Self::Item> {
 //        self.reader.
         unimplemented!()

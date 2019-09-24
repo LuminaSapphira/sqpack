@@ -1,11 +1,13 @@
 use std::error::Error;
 use std::fmt::{Debug, Result as FmtResult, Formatter, Display};
-use std::io::{Error as IOError, Result as IOResult};
+use std::io::Error as IOError;
 
 /// Errors specific to Sqpack I/O
 pub enum SqpackError {
     SqFileNotFound,
-    IO(IOError)
+    IO(IOError),
+    ReaderIsNotSqPack,
+    ReaderIsNotIndex,
 }
 
 pub type SqResult<T> = Result<T, SqpackError>;
