@@ -1,4 +1,5 @@
 #![deny(unused_extern_crates, unused_must_use)]
+#![forbid(intra_doc_link_resolution_failure)]
 
 //! A simple crate for reading the data files of FFXIV.
 //!
