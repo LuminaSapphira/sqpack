@@ -11,9 +11,9 @@ pub struct IndexReader<R>
 
 /// An iterator struct over the files present in the passed IndexReader
 pub struct IndexFiles<R: Read + Seek> {
-    pub(super) reader: IndexReader<R>,
-    pub(super) count: usize,
-    pub(super) visited: usize,
+    pub(self) reader: IndexReader<R>,
+    pub(self) count: usize,
+    pub(self) visited: usize,
 }
 
 /// The expected signature of SqPack Files
