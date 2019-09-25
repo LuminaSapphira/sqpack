@@ -95,7 +95,7 @@ impl<R: Read + Seek> IndexReader<R> {
     /// Seeks the reader to the files segment.
     pub fn seek_files(&mut self) -> SqResult<()> {
         let offset = self.files_offset()?;
-        self.inner.seek(SeekFrom::Start(offset as u64));
+        self.inner.seek(SeekFrom::Start(offset as u64))?;
         Ok(())
     }
 
