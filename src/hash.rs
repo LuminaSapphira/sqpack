@@ -2,10 +2,8 @@ pub use crate::hash_consts::{FFXIV_CRC_TABLE, FFXIV_SEED};
 
 /// Computes a hash from a seed, a CRC table, a buffer, the start index of the buffer,
 /// and the size of the slice to hash. Typically you would not need to call this, for most uses
-/// call `SqPath::get_sq_index_hash` instead.
-///
-/// If `lower` is true, the hash will be calculated as if all uppercase alphabet characters were lowercase.
-///
+/// call [`SqPath::sq_index_hash`](../sqpath/struct.SqPath.html#method.sq_index_hash) instead. If
+/// `lower` is true, the hash will be calculated as if all uppercase alphabet characters were lowercase.
 ///
 /// # Examples
 /// ```
@@ -24,11 +22,8 @@ pub fn compute_with_seed(seed: u32, table: &[u32], buffer: &[u8], start: u32, si
 }
 
 /// Computes a string's hash with the default seed used for FFXIV. Unless you're re-implementing
-/// certain parts of this library, you shouldn't need to use this. Use `SqPath::get_sq_index_hash`
-/// instead.
-///
-/// This function will simply convert the string to bytes and pass it to `compute_with_seed`.
-///
+/// certain parts of this library, you shouldn't need to use this. Use [`SqPath::sq_index_hash`](../sqpath/struct.SqPath.html#method.sq_index_hash)
+/// instead. This function will simply convert the string to bytes and pass it to [`compute_with_seed`](fn.compute_with_seed.html).
 ///
 /// # Examples
 /// ```
@@ -41,11 +36,8 @@ pub fn compute_str<S: AsRef<str> + ?Sized>(val: &S) -> u32 {
 }
 
 /// Computes a string's hash with the default seed used for FFXIV. Unless you're re-implementing
-/// certain parts of this library, you shouldn't need to use this. Use `SqPath::get_sq_index_hash`
-/// instead.
-///
-/// This function will simply convert the string to bytes and pass it to `compute_with_seed`.
-///
+/// certain parts of this library, you shouldn't need to use this. Use [`SqPath::sq_index_hash`](../sqpath/struct.SqPath.html#method.sq_index_hash)
+/// instead. This function will simply convert the string to bytes and pass it to [`compute_with_seed`](fn.compute_with_seed.html).
 ///
 /// # Examples
 /// ```
