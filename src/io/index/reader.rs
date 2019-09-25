@@ -49,9 +49,14 @@ impl<R: Read + Seek + Sized> IndexReader<R> {
     ///
     /// # Returns
     /// The header length wrapped in a result.
-    pub fn header_length(&mut self) -> SqResult<u32> {
+    fn header_length(&mut self) -> SqResult<u32> {
         self.inner.seek(SeekFrom::Start(0x0c))?;
         Ok(self.inner.read_u32::<LE>()?)
+    }
+
+    ///
+    pub fn files_len(&mut self) -> SqResult<usize> {
+
     }
 
     /// Consumes the reader, yielding an iterator over the files present in the index.
