@@ -18,7 +18,7 @@ pub struct IndexFileEntry {
     pub folder_hash: u32,
     pub file_hash: u32,
     pub data_offset: u32,
-    pub dat_file: u32,
+    pub dat_file: u8,
 }
 
 impl IndexCache {
