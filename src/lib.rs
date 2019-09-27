@@ -14,6 +14,7 @@
 //! open `Read` streams.
 
 extern crate byteorder;
+extern crate seek_bufread;
 
 /// Types and functions related to locating data within the Sqpack
 pub mod sqpath;

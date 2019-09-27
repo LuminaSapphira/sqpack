@@ -1,16 +1,35 @@
-use std::io::{Read, Seek, SeekFrom, BufReader};
+use std::io::{Read, Seek, SeekFrom};
 use ::{SqResult, SqpackError};
 use crate::byteorder::{ReadBytesExt, LE};
-use io::index::IndexFileEntry;
+use crate::seek_bufread::BufReader;
+use io::index::{IndexFileEntry, IndexFolderEntry};
+
+#[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Ord, Eq, Hash, Default)]
+struct CachedInfo {
+    header_length: Option<u32>,
+    files_offset: Option<u32>,
+    folders_offset: Option<u32>,
+    files_length: Option<u32>,
+    folders_length: Option<u32>,
+}
 
 /// A buffered reader that reads index files from a wrapped `Read` instance
 pub struct IndexReader<R>
     where R: Read + Seek {
-    inner: R,
+    inner: BufReader<R>,
+    secondary: BufReader<R>,
+    cache: CachedInfo,
 }
 
 /// An iterator struct over the files present in the passed IndexReader
 pub struct IndexFiles<R: Read + Seek> {
+    pub(self) reader: IndexReader<R>,
+    pub(self) count: usize,
+    pub(self) visited: usize,
+}
+
+/// An iterator over the folders present in the passed IndexReader
+pub struct IndexFolders<R: Read + Seek> {
     pub(self) reader: IndexReader<R>,
     pub(self) count: usize,
     pub(self) visited: usize,
@@ -28,6 +47,14 @@ const FILE_INFO_OFFSET: u64 = 0x8;
 /// The offset relative to `FILE_INFO_OFFSET` to find the length of the files section
 const FILE_LENGTH_OFFSET: u64 = 0x4;
 
+/// The offset relative to the sqpack header end to find info about the folders in the index file
+const FOLDER_INFO_OFFSET: u64 = 0xE4;
+
+/// The offset relative to `FOLDER_INFO_OFFSET` to find the length of the folders section
+const FOLDER_LENGTH_OFFSET: u64 = 0x4;
+
+
+
 impl<R: Read + Seek> IndexReader<R> {
 
     /// Accepts a `Read + Seek` and wraps an `IndexReader` around it.
@@ -36,7 +63,12 @@ impl<R: Read + Seek> IndexReader<R> {
     /// `Ok(IndexReader)` if `inner` was a `Read` over a SqPack index file
     /// `Err(...)` if an I/O error occurred or if `inner` was not a `Read` over a SqPack index file.
     pub fn new(inner: R) -> SqResult<Self> {
-        let mut inner = inner;
+        Self::with_capacity(16384, inner)
+    }
+
+    /// Creates and `IndexReader` with the specified capacity. See `IndexReader::new`.
+    pub fn with_capacity(cap: usize, inner: R) -> SqResult<Self> {
+        let mut inner = BufReader::with_capacity(cap, inner);
         inner.seek(SeekFrom::Start(0))?;
         let mut sq_sig_buffer = [0; 6];
         inner.read_exact(&mut sq_sig_buffer)?;
@@ -44,7 +76,7 @@ impl<R: Read + Seek> IndexReader<R> {
             inner.seek(SeekFrom::Start(0x14))?;
             let sqtype = inner.read_u8()?;
             if sqtype == SQPACK_INDEX_TYPE {
-                Ok(IndexReader{inner})
+                Ok(IndexReader{inner, cache: Default::default()})
             } else {
                 Err(SqpackError::ReaderIsNotIndex)
             }
@@ -53,35 +85,86 @@ impl<R: Read + Seek> IndexReader<R> {
         }
     }
 
-    /// Reads the header length from the internal reader.
+    /// Reads the header length from the internal reader. The reader position is not guaranteed to be
+    /// the same after calling.
     ///
     /// # Returns
     /// The header length wrapped in a result.
     fn header_length(&mut self) -> SqResult<u32> {
-        self.inner.seek(SeekFrom::Start(0x0c))?;
-        Ok(self.inner.read_u32::<LE>()?)
+        if let Some(len) = self.cache.header_length {
+            Ok(len)
+        } else {
+            self.inner.seek(SeekFrom::Start(0x0c))?;
+            let len = self.inner.read_u32::<LE>()?;
+            self.cache.header_length = Some(len);
+            Ok(len)
+        }
     }
 
     /// Reads the underlying reading for the offset in the .index file to the files section data.
+    /// The reader position is not guaranteed to be the same after calling.
     fn files_offset(&mut self) -> SqResult<u32> {
-
-        let header_len = self.header_length()?;
-        self.inner.seek(SeekFrom::Start(header_len as u64 + FILE_INFO_OFFSET))?;
-        let val = self.inner.read_u32::<LE>()?;
-        Ok(val)
+        if let Some(offset) = self.cache.files_offset {
+            Ok(offset)
+        } else {
+            let header_len = self.header_length()?;
+            self.inner.seek(SeekFrom::Start(header_len as u64 + FILE_INFO_OFFSET))?;
+            let val = self.inner.read_u32::<LE>()?;
+            self.cache.files_offset = Some(val);
+            Ok(val)
+        }
     }
 
-    /// Reads the underlying reader for the length in bytes of the files section
+    /// Reads the underlying reader for the length in bytes of the files section.
+    /// The reader position is not guaranteed to be the same after calling.
     fn files_length(&mut self) -> SqResult<u32> {
-        let header_len = self.header_length()?;
-        self.inner.seek(SeekFrom::Start(header_len as u64 + FILE_INFO_OFFSET + FILE_LENGTH_OFFSET))?;
-        let length = self.inner.read_u32::<LE>()?;
-        Ok(length)
+        if let Some(len) = self.cache.files_length {
+            Ok(len)
+        } else {
+            let header_len = self.header_length()?;
+            self.inner.seek(SeekFrom::Start(header_len as u64 + FILE_INFO_OFFSET + FILE_LENGTH_OFFSET))?;
+            let length = self.inner.read_u32::<LE>()?;
+            self.cache.files_length = Some(length);
+            Ok(length)
+        }
+    }
+
+    /// Reads the underlying reader for the offset to the folders section.
+    /// The reader position is not guaranteed to be the same after calling.
+    fn folders_offset(&mut self) -> SqResult<u32> {
+        if let Some(offset) = self.cache.folders_offset {
+            Ok(offset)
+        } else {
+            let header_len = self.header_length()?;
+            self.inner.seek(SeekFrom::Start(header_len as u64 + FOLDER_INFO_OFFSET))?;
+            let val = self.inner.read_u32::<LE>()?;
+            self.cache.folders_offset = Some(val);
+            Ok(val)
+        }
+    }
+
+    /// Reads the underlying reader for the length in bytes of the folders section.
+    /// The reader position is not guaranteed to be the same after calling.
+    fn folders_length(&mut self) -> SqResult<u32> {
+        if let Some(len) = self.cache.folders_length {
+            Ok(len)
+        } else {
+            let header_len = self.header_length()?;
+            self.inner.seek(SeekFrom::Start(header_len as u64 + FOLDER_INFO_OFFSET + FOLDER_LENGTH_OFFSET))?;
+            let length = self.inner.read_u32::<LE>()?;
+            self.cache.folders_length = Some(length);
+            Ok(length)
+        }
     }
 
     /// Reads the number of files specified by this index file
     pub fn files_count(&mut self) -> SqResult<usize> {
         self.files_length().map(|len| (len >> 4) as usize)
+    }
+
+    /// Reads the number of folders specified by this index file
+    pub fn folders_count(&mut self) -> SqResult<usize> {
+        self.folders_length().map(|len| (len >> 4) as usize)
     }
 
     /// Consumes the reader, yielding an iterator over the files present in the index.
@@ -102,7 +185,7 @@ impl<R: Read + Seek> IndexReader<R> {
     /// Reads a file entry from the index file. The underlying reader must be at a file,
     /// or you may get corrupted data. See [`seek_files`](method.seek_files.html). After execution,
     /// the underlying cursor is at the next file, if it exists.
-    pub fn read_file(&mut self) -> SqResult<IndexFileEntry> {
+    pub fn read_file_entry(&mut self) -> SqResult<IndexFileEntry> {
         let file_hash = self.inner.read_u32::<LE>()?;
         let folder_hash = self.inner.read_u32::<LE>()?;
         let offset = self.inner.read_u32::<LE>()?;
@@ -112,6 +195,42 @@ impl<R: Read + Seek> IndexReader<R> {
         Ok(IndexFileEntry{file_hash, folder_hash, dat_file, data_offset})
     }
 
+    /// Seeks the reader to the folders segment
+    pub fn seek_folders(&mut self) -> SqResult<()> {
+        let offset = self.folders_offset()?;
+        self.inner.seek(SeekFrom::Start(offset as u64))?;
+        Ok(())
+    }
+
+    /// Reads a folder entry from the index file. The underlying reader must be at a folder,
+    /// or you may get corrupted data. See [`seek_folders`](method.seek_folders.html). After
+    /// execution, the underlying cursor is at the next file, if it exists.
+    pub fn read_folder_entry(&mut self) -> SqResult<IndexFolderInfo> {
+        let folder_hash = self.inner.read_u32::<LE>()?;
+        let files_offset = self.inner.read_u32::<LE>()?;
+        let files_size = self.inner.read_u32::<LE>()?;
+        self.inner.seek(SeekFrom::Current(4))?;
+        let files_count = files_size >> 4;
+        Ok(IndexFolderInfo{folder_hash, files_offset, files_count})
+    }
+
+    pub fn folders(self) -> SqResult<IndexFolders<R>> {
+        let mut slf = self;
+        let count = slf.folders_count()?;
+        slf.seek_folders()?;
+        Ok(IndexFolders{reader: slf, count, visited: 0})
+    }
+
+}
+
+/// Contains info about a folder in an index file, used for reading lists of files
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub struct IndexFolderInfo<'a, R> {
+    /// The hash of the folder name, can be used to find files in an `IndexCache`
+    pub folder_hash: u32,
+    files_offset: u32,
+    files_count: u32,
+    reader: &'a mut IndexReader<R>
 }
 
 impl<R: Read + Seek> Iterator for IndexFiles<R> {
@@ -119,11 +238,21 @@ impl<R: Read + Seek> Iterator for IndexFiles<R> {
     fn next(&mut self) -> Option<Self::Item> {
         if self.visited < self.count {
             self.visited += 1;
-            Some(self.reader.read_file())
+            Some(self.reader.read_file_entry())
         } else {
             None
         }
     }
 }
 
-
+impl<R: Read + Seek> Iterator for IndexFolders<R> {
+    type Item = SqResult<IndexFolderInfo>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.visited < self.count {
+            self.visited += 1;
+            Some(self.reader.read_folder_entry())
+        } else {
+            None
+        }
+    }
+}
