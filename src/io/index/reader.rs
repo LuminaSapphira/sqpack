@@ -1,8 +1,8 @@
-use std::io::{Read, Seek, SeekFrom};
-use ::{SqResult, SqpackError};
 use crate::byteorder::{ReadBytesExt, LE};
 use crate::seek_bufread::BufReader;
 use io::index::{IndexFileEntry, IndexFolderEntry};
+use std::io::{Read, Seek, SeekFrom};
+use {SqResult, SqpackError};
 
 #[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Ord, Eq, Hash, Default)]
 struct CachedInfo {
@@ -15,28 +15,45 @@ struct CachedInfo {
 
 /// A buffered reader that reads index files from a wrapped `Read` instance
 pub struct IndexReader<R>
-    where R: Read + Seek {
-    inner: BufReader<R>,
-    secondary: BufReader<R>,
+where
+    R: Read + Seek,
+{
+    pub(self) inner: BufReader<R>,
     cache: CachedInfo,
 }
 
 /// An iterator struct over the files present in the passed IndexReader
-pub struct IndexFiles<R: Read + Seek> {
-    pub(self) reader: IndexReader<R>,
+pub struct IndexFiles<'a, R: Read + Seek> {
+    pub(self) reader: &'a mut IndexReader<R>,
     pub(self) count: usize,
     pub(self) visited: usize,
 }
 
 /// An iterator over the folders present in the passed IndexReader
-pub struct IndexFolders<R: Read + Seek> {
-    pub(self) reader: IndexReader<R>,
+pub struct IndexFolders<'a, R: Read + Seek> {
+    pub(self) reader: &'a mut IndexReader<R>,
     pub(self) count: usize,
     pub(self) visited: usize,
 }
 
+/// Contains info about a folder in an index file, used for reading lists of files
+#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+pub struct IndexFolderInfo {
+    /// The hash of the folder name, can be used to find files in an `IndexCache`
+    pub folder_hash: u32,
+    files_offset: u32,
+    pub files_count: u32,
+}
+
+/// An iterator over the contents of a specific folder in the index
+pub struct IndexFolderContents<'a, R: Read + Seek> {
+    pub(self) reader: &'a mut IndexReader<R>,
+    pub(self) files_count: u32,
+    pub(self) files_visited: u32,
+}
+
 /// The expected signature of SqPack Files
-const SQPACK_SIGNATURE: [u8; 6] = [0x53,0x71,0x50,0x61,0x63,0x6b];
+const SQPACK_SIGNATURE: [u8; 6] = [0x53, 0x71, 0x50, 0x61, 0x63, 0x6b];
 
 /// The expected type ID of SqPack index files
 const SQPACK_INDEX_TYPE: u8 = 2;
@@ -53,10 +70,7 @@ const FOLDER_INFO_OFFSET: u64 = 0xE4;
 /// The offset relative to `FOLDER_INFO_OFFSET` to find the length of the folders section
 const FOLDER_LENGTH_OFFSET: u64 = 0x4;
 
-
-
 impl<R: Read + Seek> IndexReader<R> {
-
     /// Accepts a `Read + Seek` and wraps an `IndexReader` around it.
     ///
     /// # Returns
@@ -76,7 +90,10 @@ impl<R: Read + Seek> IndexReader<R> {
             inner.seek(SeekFrom::Start(0x14))?;
             let sqtype = inner.read_u8()?;
             if sqtype == SQPACK_INDEX_TYPE {
-                Ok(IndexReader{inner, cache: Default::default()})
+                Ok(IndexReader {
+                    inner,
+                    cache: Default::default(),
+                })
             } else {
                 Err(SqpackError::ReaderIsNotIndex)
             }
@@ -108,7 +125,8 @@ impl<R: Read + Seek> IndexReader<R> {
             Ok(offset)
         } else {
             let header_len = self.header_length()?;
-            self.inner.seek(SeekFrom::Start(header_len as u64 + FILE_INFO_OFFSET))?;
+            self.inner
+                .seek(SeekFrom::Start(header_len as u64 + FILE_INFO_OFFSET))?;
             let val = self.inner.read_u32::<LE>()?;
             self.cache.files_offset = Some(val);
             Ok(val)
@@ -122,7 +140,9 @@ impl<R: Read + Seek> IndexReader<R> {
             Ok(len)
         } else {
             let header_len = self.header_length()?;
-            self.inner.seek(SeekFrom::Start(header_len as u64 + FILE_INFO_OFFSET + FILE_LENGTH_OFFSET))?;
+            self.inner.seek(SeekFrom::Start(
+                header_len as u64 + FILE_INFO_OFFSET + FILE_LENGTH_OFFSET,
+            ))?;
             let length = self.inner.read_u32::<LE>()?;
             self.cache.files_length = Some(length);
             Ok(length)
@@ -136,7 +156,8 @@ impl<R: Read + Seek> IndexReader<R> {
             Ok(offset)
         } else {
             let header_len = self.header_length()?;
-            self.inner.seek(SeekFrom::Start(header_len as u64 + FOLDER_INFO_OFFSET))?;
+            self.inner
+                .seek(SeekFrom::Start(header_len as u64 + FOLDER_INFO_OFFSET))?;
             let val = self.inner.read_u32::<LE>()?;
             self.cache.folders_offset = Some(val);
             Ok(val)
@@ -150,7 +171,9 @@ impl<R: Read + Seek> IndexReader<R> {
             Ok(len)
         } else {
             let header_len = self.header_length()?;
-            self.inner.seek(SeekFrom::Start(header_len as u64 + FOLDER_INFO_OFFSET + FOLDER_LENGTH_OFFSET))?;
+            self.inner.seek(SeekFrom::Start(
+                header_len as u64 + FOLDER_INFO_OFFSET + FOLDER_LENGTH_OFFSET,
+            ))?;
             let length = self.inner.read_u32::<LE>()?;
             self.cache.folders_length = Some(length);
             Ok(length)
@@ -167,12 +190,16 @@ impl<R: Read + Seek> IndexReader<R> {
         self.folders_length().map(|len| (len >> 4) as usize)
     }
 
-    /// Consumes the reader, yielding an iterator over the files present in the index.
-    pub fn files(self) -> SqResult<IndexFiles<R>> {
+    /// Creates an iterator over the files present in the index.
+    pub fn files(&mut self) -> SqResult<IndexFiles<R>> {
         let mut slf = self;
         let count = slf.files_count()?;
         slf.seek_files()?;
-        Ok(IndexFiles{reader: slf, count, visited: 0})
+        Ok(IndexFiles {
+            reader: slf,
+            count,
+            visited: 0,
+        })
     }
 
     /// Seeks the reader to the files segment.
@@ -192,7 +219,12 @@ impl<R: Read + Seek> IndexReader<R> {
         let dat_file = ((offset & 0x7) >> 1) as u8;
         let data_offset = ((offset & 0xfffffff8) << 3) as u32;
         self.inner.read_u32::<LE>()?;
-        Ok(IndexFileEntry{file_hash, folder_hash, dat_file, data_offset})
+        Ok(IndexFileEntry {
+            file_hash,
+            folder_hash,
+            dat_file,
+            data_offset,
+        })
     }
 
     /// Seeks the reader to the folders segment
@@ -211,29 +243,59 @@ impl<R: Read + Seek> IndexReader<R> {
         let files_size = self.inner.read_u32::<LE>()?;
         self.inner.seek(SeekFrom::Current(4))?;
         let files_count = files_size >> 4;
-        Ok(IndexFolderInfo{folder_hash, files_offset, files_count})
+        Ok(IndexFolderInfo {
+            folder_hash,
+            files_offset,
+            files_count,
+        })
     }
 
-    pub fn folders(self) -> SqResult<IndexFolders<R>> {
+    /// Creates an iterator over the folder entries of the reader.
+    /// *Note*: you cannot use this method to obtain file info. See [`folder_contents`](method.folder_contents.html).
+    pub fn folders(&mut self) -> SqResult<IndexFolders<R>> {
         let mut slf = self;
         let count = slf.folders_count()?;
         slf.seek_folders()?;
-        Ok(IndexFolders{reader: slf, count, visited: 0})
+        Ok(IndexFolders {
+            reader: slf,
+            count,
+            visited: 0,
+        })
     }
 
+    /// Seeks the underlying reader to the location of the specified folder's contents
+    pub fn seek_folder_contents(&mut self, info: &IndexFolderInfo) -> SqResult<()> {
+        self.inner.seek(SeekFrom::Start(info.files_offset as u64))?;
+        Ok(())
+    }
+
+    /// Creates an iterator over the contents of the folder identified by `folder_info`
+    pub fn folder_contents(
+        &mut self,
+        folder_info: &IndexFolderInfo,
+    ) -> SqResult<IndexFolderContents<R>> {
+        self.seek_folder_contents(folder_info)?;
+        Ok(IndexFolderContents {
+            reader: self,
+            files_count: folder_info.files_count,
+            files_visited: 0,
+        })
+    }
 }
 
-/// Contains info about a folder in an index file, used for reading lists of files
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
-pub struct IndexFolderInfo<'a, R> {
-    /// The hash of the folder name, can be used to find files in an `IndexCache`
-    pub folder_hash: u32,
-    files_offset: u32,
-    files_count: u32,
-    reader: &'a mut IndexReader<R>
+impl<'a, R: Read + Seek> Iterator for IndexFolderContents<'a, R> {
+    type Item = SqResult<IndexFileEntry>;
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.files_visited < self.files_count {
+            self.files_visited += 1;
+            Some(self.reader.read_file_entry())
+        } else {
+            None
+        }
+    }
 }
 
-impl<R: Read + Seek> Iterator for IndexFiles<R> {
+impl<'a, R: Read + Seek> Iterator for IndexFiles<'a, R> {
     type Item = SqResult<IndexFileEntry>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.visited < self.count {
@@ -245,7 +307,7 @@ impl<R: Read + Seek> Iterator for IndexFiles<R> {
     }
 }
 
-impl<R: Read + Seek> Iterator for IndexFolders<R> {
+impl<'a, R: Read + Seek> Iterator for IndexFolders<'a, R> {
     type Item = SqResult<IndexFolderInfo>;
     fn next(&mut self) -> Option<Self::Item> {
         if self.visited < self.count {
