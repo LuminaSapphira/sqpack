@@ -1,6 +1,5 @@
-
+use sqpath::{Expansion, FileType};
 use std::collections::HashMap;
-use sqpath::{FileType, Expansion};
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct IndexCache {
@@ -22,11 +21,7 @@ pub struct IndexFileEntry {
 }
 
 impl IndexCache {
-
     pub fn new(file_type: FileType, game_expansion: Expansion) -> IndexCache {
-
         unimplemented!()
-
     }
-
 }

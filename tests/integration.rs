@@ -2,12 +2,12 @@ extern crate sqpack;
 
 const FFXIV_SQPACK_PATH: &'static str = "FFXIV_SQPACK_PATH";
 
+use sqpack::io::index::IndexReader;
+use sqpack::SqPath;
 use std::collections::HashMap;
 use std::env;
 use std::fs::File;
-use std::io::{BufReader, BufRead};
-use sqpack::io::index::IndexReader;
-use sqpack::SqPath;
+use std::io::{BufRead, BufReader};
 
 fn get_env_vars() -> HashMap<String, String> {
     env::vars().collect()

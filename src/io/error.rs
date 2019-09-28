@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::fmt::{Debug, Result as FmtResult, Formatter, Display};
+use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 use std::io::Error as IOError;
 
 /// Errors specific to Sqpack I/O
@@ -15,7 +15,9 @@ pub type SqResult<T> = Result<T, SqpackError>;
 impl Error for SqpackError {}
 
 impl Display for SqpackError {
-    fn fmt(&self, f: &mut Formatter) -> FmtResult { write!(f, "{:?}", self) }
+    fn fmt(&self, f: &mut Formatter) -> FmtResult {
+        write!(f, "{:?}", self)
+    }
 }
 
 impl Debug for SqpackError {

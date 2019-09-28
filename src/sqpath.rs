@@ -1,7 +1,5 @@
+use crate::hash;
 use std::borrow::Borrow;
-use crate::{
-    hash,
-};
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 
@@ -10,7 +8,7 @@ use std::path::{Path, PathBuf};
 /// **unsized** type, so it must always be behind a reference such as & or Box.
 /// Use SqPathBuf for the Owned/Sized/Allocated variant.
 pub struct SqPath {
-    inner: str
+    inner: str,
 }
 
 impl SqPath {
@@ -48,7 +46,7 @@ impl SqPath {
         let last_part = path.rfind("/");
         last_part.map(|index| SqIndexHash {
             folder_hash: hash::compute_str_lower(&path[0..index]),
-            file_hash: hash::compute_str_lower(&path[index + 1..])
+            file_hash: hash::compute_str_lower(&path[index + 1..]),
         })
     }
 
@@ -62,7 +60,10 @@ impl SqPath {
         let sqpack = sqpack.as_ref();
 
         // "______.win32.index"
-        let mut data: [u8; 18] = [0, 0, 0, 0, 0, 0, 0x2e, 0x77, 0x69, 0x6e, 0x33, 0x32, 0x2e, 0x69, 0x6e, 0x64, 0x65, 0x78];
+        let mut data: [u8; 18] = [
+            0, 0, 0, 0, 0, 0, 0x2e, 0x77, 0x69, 0x6e, 0x33, 0x32, 0x2e, 0x69, 0x6e, 0x64, 0x65,
+            0x78,
+        ];
 
         let file_type = FileType::parse_from_sqpath(self).map(|a| a.file_name_prefix_str());
         file_type
@@ -91,7 +92,9 @@ impl SqPath {
 
                 // Always valid utf-8 at this point
                 let file_name = std::str::from_utf8(data.as_ref()).unwrap();
-                let pb = sqpack.join(Expansion::parse_from_sqpath(self).unwrap().as_str()).join(file_name);
+                let pb = sqpack
+                    .join(Expansion::parse_from_sqpath(self).unwrap().as_str())
+                    .join(file_name);
                 Some(pb)
             })
     }
@@ -100,7 +103,6 @@ impl SqPath {
     pub fn as_str(&self) -> &str {
         &self.inner
     }
-
 }
 
 #[derive(Ord, PartialOrd, PartialEq, Eq, Debug, Hash, Clone)]
@@ -108,7 +110,7 @@ impl SqPath {
 /// It implements `Deref<SqPath>` so you can call all the same functions as
 /// `SqPath`.
 pub struct SqPathBuf {
-    inner: String
+    inner: String,
 }
 
 impl SqPathBuf {
@@ -127,7 +129,9 @@ impl SqPathBuf {
     /// assert_eq!(a, b)
     /// ```
     pub fn new<S: AsRef<str> + ?Sized>(s: &S) -> SqPathBuf {
-        SqPathBuf { inner: String::from(s.as_ref()) }
+        SqPathBuf {
+            inner: String::from(s.as_ref()),
+        }
     }
 }
 
@@ -167,7 +171,6 @@ pub enum FileType {
 }
 
 impl FileType {
-
     /// Parses the filetype implied by the first segment of `sqpath`
     ///
     /// # Returns
@@ -180,27 +183,24 @@ impl FileType {
         let index_opt = s.find('/');
         let slice_opt = index_opt.map(|index| &s[..index]);
 
-        slice_opt
-            .and_then(|type_str| {
-                match type_str {
-                    "common" => Some(FileType::Common),
-                    "bgcommon" => Some(FileType::BGCommon),
-                    "bg" => Some(FileType::BG),
-                    "cut" => Some(FileType::Cut),
-                    "chara" => Some(FileType::Chara),
-                    "shader" => Some(FileType::Shader),
-                    "ui" => Some(FileType::UI),
-                    "sound" => Some(FileType::Sound),
-                    "vfx" => Some(FileType::VFX),
-                    "ui_script" => Some(FileType::UIScript),
-                    "exd" => Some(FileType::EXD),
-                    "game_script" => Some(FileType::GameScript),
-                    "music" => Some(FileType::Music),
-                    "_sqpack_test" => Some(FileType::SqpackTest),
-                    "_debug" => Some(FileType::Debug),
-                    _ => None
-                }
-            })
+        slice_opt.and_then(|type_str| match type_str {
+            "common" => Some(FileType::Common),
+            "bgcommon" => Some(FileType::BGCommon),
+            "bg" => Some(FileType::BG),
+            "cut" => Some(FileType::Cut),
+            "chara" => Some(FileType::Chara),
+            "shader" => Some(FileType::Shader),
+            "ui" => Some(FileType::UI),
+            "sound" => Some(FileType::Sound),
+            "vfx" => Some(FileType::VFX),
+            "ui_script" => Some(FileType::UIScript),
+            "exd" => Some(FileType::EXD),
+            "game_script" => Some(FileType::GameScript),
+            "music" => Some(FileType::Music),
+            "_sqpack_test" => Some(FileType::SqpackTest),
+            "_debug" => Some(FileType::Debug),
+            _ => None,
+        })
     }
 
     /// Gets a reference to a static string representing the hex code of the FileType variant.
@@ -279,7 +279,6 @@ pub enum Expansion {
 }
 
 impl Expansion {
-
     /// Parses the expansion implied by the second segment of `sqpath`
     ///
     /// # Returns
@@ -289,19 +288,15 @@ impl Expansion {
         let sqpath = sqpath.as_ref();
         let s = sqpath.as_str();
 
-
-
         s.split('/')
             .skip(1)
             .next()
-            .and_then(|exp_str| {
-                match exp_str {
-                    "ffxiv" => Some(Expansion::FFXIV),
-                    "ex1" => Some(Expansion::Heavensward),
-                    "ex2" => Some(Expansion::Stormblood),
-                    "ex3" => Some(Expansion::Shadowbringers),
-                    _ => None
-                }
+            .and_then(|exp_str| match exp_str {
+                "ffxiv" => Some(Expansion::FFXIV),
+                "ex1" => Some(Expansion::Heavensward),
+                "ex2" => Some(Expansion::Stormblood),
+                "ex3" => Some(Expansion::Shadowbringers),
+                _ => None,
             })
     }
 
@@ -354,9 +349,7 @@ impl SqPackNumber {
         s.split('/')
             .skip(2)
             .next()
-            .and_then(|filename_str: &str| {
-                filename_str.split('_').next()
-            })
+            .and_then(|filename_str: &str| filename_str.split('_').next())
             .and_then(|part: &str| {
                 let val = u8::from_str_radix(part, 16).ok().unwrap_or(0);
                 Some(SqPackNumber(val))
@@ -369,8 +362,16 @@ impl SqPackNumber {
         let mut data = [0; 2];
         let left = self.0 >> 4;
         let right = self.0 & 0xf;
-        data[0] = if left < 10 { left + 0x30 } else { left + 0x61 - 10 };
-        data[1] = if right < 10 { right + 0x30 } else { right + 0x61 - 10 };
+        data[0] = if left < 10 {
+            left + 0x30
+        } else {
+            left + 0x61 - 10
+        };
+        data[1] = if right < 10 {
+            right + 0x30
+        } else {
+            right + 0x61 - 10
+        };
         data
     }
 }
@@ -382,15 +383,21 @@ impl AsRef<SqPath> for str {
 }
 
 impl AsRef<SqPath> for &SqPath {
-    fn as_ref(&self) -> &SqPath { self }
+    fn as_ref(&self) -> &SqPath {
+        self
+    }
 }
 
 impl AsRef<SqPath> for String {
-    fn as_ref(&self) -> &SqPath { SqPath::new(self.as_str()) }
+    fn as_ref(&self) -> &SqPath {
+        SqPath::new(self.as_str())
+    }
 }
 
 impl AsRef<SqPath> for SqPathBuf {
-    fn as_ref(&self) -> &SqPath { self.inner.as_ref() }
+    fn as_ref(&self) -> &SqPath {
+        self.inner.as_ref()
+    }
 }
 
 impl ToOwned for SqPath {
@@ -408,9 +415,9 @@ impl Borrow<SqPath> for SqPathBuf {
 
 #[cfg(test)]
 mod sqpath_tests {
-    use SqPath;
-    use sqpath::{SqPathBuf, FileType, Expansion, SqPackNumber};
+    use sqpath::{Expansion, FileType, SqPackNumber, SqPathBuf};
     use std::borrow::Borrow;
+    use SqPath;
 
     #[test]
     fn basic_sqpath() {
@@ -453,7 +460,9 @@ mod sqpath_tests {
         assert_eq!(sq_index_path.file_hash, 0xE3B71579);
 
         let sq_pathbuf: SqPathBuf = sq_path.to_owned();
-        let sq_index_path = sq_pathbuf.sq_index_hash().expect("Path was not well formed");
+        let sq_index_path = sq_pathbuf
+            .sq_index_hash()
+            .expect("Path was not well formed");
         assert_eq!(sq_index_path.folder_hash, 0x0AF269D6);
         assert_eq!(sq_index_path.file_hash, 0xE3B71579);
     }
@@ -502,21 +511,96 @@ mod sqpath_tests {
 
     #[test]
     fn file_type_parse_and_as_str_eq() {
-        assert_eq!(FileType::parse_from_sqpath("common/ffxiv/asdfdfh").unwrap().as_str(), "common");
-        assert_eq!(FileType::parse_from_sqpath("bgcommon/ex1/asdfdfh").unwrap().as_str(), "bgcommon");
-        assert_eq!(FileType::parse_from_sqpath("bg/ex2/asdfdfh").unwrap().as_str(), "bg");
-        assert_eq!(FileType::parse_from_sqpath("cut/ex3/dfsdfg").unwrap().as_str(), "cut");
-        assert_eq!(FileType::parse_from_sqpath("chara/ffxiv/sdfgdfs").unwrap().as_str(), "chara");
-        assert_eq!(FileType::parse_from_sqpath("shader/ffxiv/fdgsdgs").unwrap().as_str(), "shader");
-        assert_eq!(FileType::parse_from_sqpath("ui/ex3/srdsfvr").unwrap().as_str(), "ui");
-        assert_eq!(FileType::parse_from_sqpath("sound/ffxiv/sdfgdfg").unwrap().as_str(), "sound");
-        assert_eq!(FileType::parse_from_sqpath("vfx/ffxiv/sdfdfg").unwrap().as_str(), "vfx");
-        assert_eq!(FileType::parse_from_sqpath("ui_script/ffxiv/sdfsdf").unwrap().as_str(), "ui_script");
-        assert_eq!(FileType::parse_from_sqpath("exd/ffxiv/sdfdsfg").unwrap().as_str(), "exd");
-        assert_eq!(FileType::parse_from_sqpath("game_script/ffxiv/sdfdsfg").unwrap().as_str(), "game_script");
-        assert_eq!(FileType::parse_from_sqpath("music/ffxiv/sdfdsfg").unwrap().as_str(), "music");
-        assert_eq!(FileType::parse_from_sqpath("_sqpack_test/ffxiv/sdfdsfg").unwrap().as_str(), "_sqpack_test");
-        assert_eq!(FileType::parse_from_sqpath("_debug/ffxiv/sdfdsfg").unwrap().as_str(), "_debug");
+        assert_eq!(
+            FileType::parse_from_sqpath("common/ffxiv/asdfdfh")
+                .unwrap()
+                .as_str(),
+            "common"
+        );
+        assert_eq!(
+            FileType::parse_from_sqpath("bgcommon/ex1/asdfdfh")
+                .unwrap()
+                .as_str(),
+            "bgcommon"
+        );
+        assert_eq!(
+            FileType::parse_from_sqpath("bg/ex2/asdfdfh")
+                .unwrap()
+                .as_str(),
+            "bg"
+        );
+        assert_eq!(
+            FileType::parse_from_sqpath("cut/ex3/dfsdfg")
+                .unwrap()
+                .as_str(),
+            "cut"
+        );
+        assert_eq!(
+            FileType::parse_from_sqpath("chara/ffxiv/sdfgdfs")
+                .unwrap()
+                .as_str(),
+            "chara"
+        );
+        assert_eq!(
+            FileType::parse_from_sqpath("shader/ffxiv/fdgsdgs")
+                .unwrap()
+                .as_str(),
+            "shader"
+        );
+        assert_eq!(
+            FileType::parse_from_sqpath("ui/ex3/srdsfvr")
+                .unwrap()
+                .as_str(),
+            "ui"
+        );
+        assert_eq!(
+            FileType::parse_from_sqpath("sound/ffxiv/sdfgdfg")
+                .unwrap()
+                .as_str(),
+            "sound"
+        );
+        assert_eq!(
+            FileType::parse_from_sqpath("vfx/ffxiv/sdfdfg")
+                .unwrap()
+                .as_str(),
+            "vfx"
+        );
+        assert_eq!(
+            FileType::parse_from_sqpath("ui_script/ffxiv/sdfsdf")
+                .unwrap()
+                .as_str(),
+            "ui_script"
+        );
+        assert_eq!(
+            FileType::parse_from_sqpath("exd/ffxiv/sdfdsfg")
+                .unwrap()
+                .as_str(),
+            "exd"
+        );
+        assert_eq!(
+            FileType::parse_from_sqpath("game_script/ffxiv/sdfdsfg")
+                .unwrap()
+                .as_str(),
+            "game_script"
+        );
+        assert_eq!(
+            FileType::parse_from_sqpath("music/ffxiv/sdfdsfg")
+                .unwrap()
+                .as_str(),
+            "music"
+        );
+        assert_eq!(
+            FileType::parse_from_sqpath("_sqpack_test/ffxiv/sdfdsfg")
+                .unwrap()
+                .as_str(),
+            "_sqpack_test"
+        );
+        assert_eq!(
+            FileType::parse_from_sqpath("_debug/ffxiv/sdfdsfg")
+                .unwrap()
+                .as_str(),
+            "_debug"
+        );
     }
 
     #[test]
@@ -561,11 +645,36 @@ mod sqpath_tests {
 
     #[test]
     fn expansion_parse_and_as_str_eq() {
-        assert_eq!(Expansion::parse_from_sqpath("common/ffxiv/dfgsdfg.asd").unwrap().as_str(), "ffxiv");
-        assert_eq!(Expansion::parse_from_sqpath("bgcommon/ex1/asdasd.fgh").unwrap().as_str(), "ex1");
-        assert_eq!(Expansion::parse_from_sqpath("bg/ex2/dfhdfgh.hhjg").unwrap().as_str(), "ex2");
-        assert_eq!(Expansion::parse_from_sqpath("cut/ex3/dfghds.yss").unwrap().as_str(), "ex3");
-        assert_eq!(Expansion::parse_from_sqpath("cut/ex3/165_dfghds.yss").unwrap().as_str(), "ex3");
+        assert_eq!(
+            Expansion::parse_from_sqpath("common/ffxiv/dfgsdfg.asd")
+                .unwrap()
+                .as_str(),
+            "ffxiv"
+        );
+        assert_eq!(
+            Expansion::parse_from_sqpath("bgcommon/ex1/asdasd.fgh")
+                .unwrap()
+                .as_str(),
+            "ex1"
+        );
+        assert_eq!(
+            Expansion::parse_from_sqpath("bg/ex2/dfhdfgh.hhjg")
+                .unwrap()
+                .as_str(),
+            "ex2"
+        );
+        assert_eq!(
+            Expansion::parse_from_sqpath("cut/ex3/dfghds.yss")
+                .unwrap()
+                .as_str(),
+            "ex3"
+        );
+        assert_eq!(
+            Expansion::parse_from_sqpath("cut/ex3/165_dfghds.yss")
+                .unwrap()
+                .as_str(),
+            "ex3"
+        );
     }
 
     #[test]
@@ -578,28 +687,74 @@ mod sqpath_tests {
 
     #[test]
     fn parse_sqpack_number() {
-        assert_eq!(SqPackNumber::parse_from_sqpath("common/ffxiv/sdfsfda.adasd").unwrap().0, 0);
-        assert_eq!(SqPackNumber::parse_from_sqpath("common/ex2/001_sdfsfda.adasd").unwrap().0, 1);
-        assert_eq!(SqPackNumber::parse_from_sqpath("common/ex2/00b_sdfsfda.adasd").unwrap().0, 11);
+        assert_eq!(
+            SqPackNumber::parse_from_sqpath("common/ffxiv/sdfsfda.adasd")
+                .unwrap()
+                .0,
+            0
+        );
+        assert_eq!(
+            SqPackNumber::parse_from_sqpath("common/ex2/001_sdfsfda.adasd")
+                .unwrap()
+                .0,
+            1
+        );
+        assert_eq!(
+            SqPackNumber::parse_from_sqpath("common/ex2/00b_sdfsfda.adasd")
+                .unwrap()
+                .0,
+            11
+        );
     }
 
     #[test]
     fn sqpack_number_prefix() {
-        assert_eq!(std::str::from_utf8(&SqPackNumber(0).file_name_prefix_str()).unwrap(), "00");
-        assert_eq!(std::str::from_utf8(&SqPackNumber(1).file_name_prefix_str()).unwrap(), "01");
-        assert_eq!(std::str::from_utf8(&SqPackNumber(10).file_name_prefix_str()).unwrap(), "0a");
-        assert_eq!(std::str::from_utf8(&SqPackNumber(16).file_name_prefix_str()).unwrap(), "10");
-        assert_eq!(std::str::from_utf8(&SqPackNumber(255).file_name_prefix_str()).unwrap(), "ff");
+        assert_eq!(
+            std::str::from_utf8(&SqPackNumber(0).file_name_prefix_str()).unwrap(),
+            "00"
+        );
+        assert_eq!(
+            std::str::from_utf8(&SqPackNumber(1).file_name_prefix_str()).unwrap(),
+            "01"
+        );
+        assert_eq!(
+            std::str::from_utf8(&SqPackNumber(10).file_name_prefix_str()).unwrap(),
+            "0a"
+        );
+        assert_eq!(
+            std::str::from_utf8(&SqPackNumber(16).file_name_prefix_str()).unwrap(),
+            "10"
+        );
+        assert_eq!(
+            std::str::from_utf8(&SqPackNumber(255).file_name_prefix_str()).unwrap(),
+            "ff"
+        );
     }
 
     #[test]
     fn sqpack_index_path() {
-        let index = SqPath::new("music/ffxiv/BGM_System_Title.scd").sqpack_index_path("/home/uwu/ffxiv/sqpack/");
+        let index = SqPath::new("music/ffxiv/BGM_System_Title.scd")
+            .sqpack_index_path("/home/uwu/ffxiv/sqpack/");
         let pb = index.unwrap();
-        assert_eq!(pb.as_os_str(), "/home/uwu/ffxiv/sqpack/ffxiv/0c0000.win32.index");
+        assert_eq!(
+            pb.as_os_str(),
+            "/home/uwu/ffxiv/sqpack/ffxiv/0c0000.win32.index"
+        );
 
         let path = "/home/uwu/ffxiv/sqpack";
-        assert_eq!(SqPath::new("music/ex3/BGM_EX3_Event_05.scd").sqpack_index_path(path).unwrap().as_os_str(), "/home/uwu/ffxiv/sqpack/ex3/0c0300.win32.index");
-        assert_eq!(SqPath::new("common/ex2/0fe_uwu.owo").sqpack_index_path(path).unwrap().as_os_str(), "/home/uwu/ffxiv/sqpack/ex2/0002fe.win32.index");
+        assert_eq!(
+            SqPath::new("music/ex3/BGM_EX3_Event_05.scd")
+                .sqpack_index_path(path)
+                .unwrap()
+                .as_os_str(),
+            "/home/uwu/ffxiv/sqpack/ex3/0c0300.win32.index"
+        );
+        assert_eq!(
+            SqPath::new("common/ex2/0fe_uwu.owo")
+                .sqpack_index_path(path)
+                .unwrap()
+                .as_os_str(),
+            "/home/uwu/ffxiv/sqpack/ex2/0002fe.win32.index"
+        );
     }
 }

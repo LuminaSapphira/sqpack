@@ -26,11 +26,5 @@ pub mod io;
 pub mod hash;
 mod hash_consts;
 
-pub use io::{
-    SqpackError,
-    SqResult,
-    sqfile::SqFile
-};
-pub use sqpath::{
-    SqPath
-};
+pub use io::{sqfile::SqFile, SqResult, SqpackError};
+pub use sqpath::SqPath;
