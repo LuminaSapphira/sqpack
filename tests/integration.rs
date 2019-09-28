@@ -27,7 +27,7 @@ fn index_iterator() {
 
     let index_path = sqpath.sqpack_index_path(path).unwrap();
     let index_file = File::open(index_path).unwrap();
-    let reader = IndexReader::new(index_file).unwrap();
+    let mut reader = IndexReader::new(index_file).unwrap();
     for res in reader.files().unwrap() {
         let entry = res.unwrap();
         println!("{}/{}", entry.folder_hash, entry.file_hash);
