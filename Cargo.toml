@@ -12,3 +12,6 @@ homepage = "https://github.com/CerulanLumina/sqpack"
 [dependencies]
 byteorder = "1.3.2"
 seek_bufread = "1.2.2"
+
+[dev-dependencies]
+walkdir = "2.2.9"

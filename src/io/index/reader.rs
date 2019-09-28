@@ -1,6 +1,6 @@
 use crate::byteorder::{ReadBytesExt, LE};
 use crate::seek_bufread::BufReader;
-use io::index::{IndexFileEntry, IndexFolderEntry};
+use io::index::IndexFileEntry;
 use std::io::{Read, Seek, SeekFrom};
 use {SqResult, SqpackError};
 
@@ -192,11 +192,10 @@ impl<R: Read + Seek> IndexReader<R> {
 
     /// Creates an iterator over the files present in the index.
     pub fn files(&mut self) -> SqResult<IndexFiles<R>> {
-        let mut slf = self;
-        let count = slf.files_count()?;
-        slf.seek_files()?;
+        let count = self.files_count()?;
+        self.seek_files()?;
         Ok(IndexFiles {
-            reader: slf,
+            reader: self,
             count,
             visited: 0,
         })
@@ -253,11 +252,10 @@ impl<R: Read + Seek> IndexReader<R> {
     /// Creates an iterator over the folder entries of the reader.
     /// *Note*: you cannot use this method to obtain file info. See [`folder_contents`](method.folder_contents.html).
     pub fn folders(&mut self) -> SqResult<IndexFolders<R>> {
-        let mut slf = self;
-        let count = slf.folders_count()?;
-        slf.seek_folders()?;
+        let count = self.folders_count()?;
+        self.seek_folders()?;
         Ok(IndexFolders {
-            reader: slf,
+            reader: self,
             count,
             visited: 0,
         })
