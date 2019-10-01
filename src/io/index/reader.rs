@@ -303,6 +303,10 @@ impl<'a, R: Read + Seek> Iterator for IndexFiles<'a, R> {
             None
         }
     }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let c = self.count - self.visited;
+        (c, Some(c))
+    }
 }
 
 impl<'a, R: Read + Seek> Iterator for IndexFolders<'a, R> {
@@ -314,5 +318,9 @@ impl<'a, R: Read + Seek> Iterator for IndexFolders<'a, R> {
         } else {
             None
         }
+    }
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        let c = self.count - self.visited;
+        (c, Some(c))
     }
 }
