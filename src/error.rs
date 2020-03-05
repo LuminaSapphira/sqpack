@@ -8,6 +8,7 @@ pub enum SqpackError {
     IO(IOError),
     ReaderIsNotSqPack,
     ReaderIsNotIndex,
+    UnknownContentType(u32),
 }
 
 pub type SqResult<T> = Result<T, SqpackError>;
@@ -27,6 +28,7 @@ impl Debug for SqpackError {
             Self::IO(err) => write!(f, "Underlying IO Error ({:?})", err),
             Self::ReaderIsNotSqPack => write!(f, "The underlying reader is not SqPack data"),
             Self::ReaderIsNotIndex => write!(f, "The underlying reader is not SqPack Index data"),
+            Self::UnknownContentType(unk) => write!(f, "Unknown content type found while reading .dat: {}", unk)
         }
     }
 }
