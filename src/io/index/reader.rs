@@ -2,7 +2,7 @@ use crate::byteorder::{ReadBytesExt, LE};
 use crate::seek_bufread::BufReader;
 use io::index::IndexFileEntry;
 use std::io::{Read, Seek, SeekFrom};
-use {SqResult, SqpackError};
+use crate::error::{SqResult, SqpackError};
 
 #[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Ord, Eq, Hash, Default)]
 struct CachedInfo {

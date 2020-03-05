@@ -1,7 +1,7 @@
 use io::index::IndexReader;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
-use SqResult;
+use crate::error::SqResult;
 
 /// An in-memory cache of a single .index file. Recommended for reading many files all from the
 /// same index.

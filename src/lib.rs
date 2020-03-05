@@ -26,5 +26,7 @@ pub mod io;
 pub mod hash;
 mod hash_consts;
 
-pub use io::{sqfile::SqFile, SqResult, SqpackError};
+/// Module for errors specific to SqPack reading and processing
+pub mod error;
+
 pub use sqpath::SqPath;
