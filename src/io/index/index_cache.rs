@@ -20,9 +20,16 @@ pub struct IndexFolderEntry {
 /// A file entry within the index cache. Can be used to locate the file data within the .dat files.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub struct IndexFileEntry {
+    /// The folder hash of the file path
     pub folder_hash: u32,
+
+    /// The file hash of the file path
     pub file_hash: u32,
+
+    /// Where in the .dat file the data may be found
     pub data_offset: u32,
+
+    /// Which .dat file the file may be found in. I.
     pub dat_file: u8,
 }
 
