@@ -15,6 +15,7 @@
 
 extern crate byteorder;
 extern crate seek_bufread;
+extern crate flate2;
 
 /// Types and functions related to locating data within the Sqpack
 pub mod sqpath;
