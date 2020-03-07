@@ -35,8 +35,7 @@ impl Debug for SqpackError {
         match self {
             Self::SqFileNotFound => write!(f, "SqPath not found in index!"),
             Self::IO(err) => write!(f, "Underlying IO Error ({:?})", err),
-            Self::ReaderIsNotSqPack => write!(f, "The underlying reader is not SqPack data"),
-            Self::ReaderIsNotIndex => write!(f, "The underlying reader is not SqPack Index data"),
+            Self::IndexReaderIsNotIndex => write!(f, "The underlying reader is not SqPack Index data"),
             Self::UnknownContentType(unk) => write!(f, "Unknown content type found while reading .dat: {}", unk)
         }
     }

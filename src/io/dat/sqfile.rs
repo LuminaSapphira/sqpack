@@ -76,6 +76,17 @@ impl<R: Read + Seek> SqFile<R> {
         Ok(SqFile { inner: reader, index_entry, blocks, current_block: None, dat_info})
     }
 
+    /// Reopens this SqFile reader on a new index file, without having to construct
+    /// a new reader.
+    pub fn reopen(self, index_entry: IndexFileEntry) -> SqResult<SqFile<R>> {
+        let mut slf = self;
+        slf.dat_info = DatInfo::read_header(&mut slf.inner, &index_entry)?;
+        slf.current_block = None;
+        slf.blocks = read_block_table_entries(&mut slf.inner, &index_entry, &slf.dat_info)?.into_iter();
+        slf.index_entry = index_entry;
+        Ok(slf)
+    }
+
     /// Begins reading a block. Loads the block data into a buffer and
     /// determines if it needs decompression.
     fn start_block(&mut self, entry: BlockTableEntry) -> Result<ReadingBlock, IOError> {
@@ -84,7 +95,7 @@ impl<R: Read + Seek> SqFile<R> {
 
         // Read the header into a buffer
         let mut header = [0u8; 0x10];
-        self.inner.read_exact(&mut header);
+        self.inner.read_exact(&mut header)?;
         let mut cursor = Cursor::new(header);
 
         // Read the header data
