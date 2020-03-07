@@ -1,11 +1,10 @@
 use std::io::{Seek, Read, SeekFrom, BufReader, Error as IOError, Cursor, ErrorKind};
-use io::index::IndexFileEntry;
-use error::SqResult;
+use io::index::{IndexFileEntry, IndexReader};
+use error::{SqResult, SqpackError};
 use io::dat::ContentType;
 use byteorder::{LE, ReadBytesExt};
 use std::convert::TryInto;
 use flate2::bufread::DeflateDecoder;
-use std::cmp::min;
 use std::vec::IntoIter as VecIntoIter;
 use std::fs::File;
 use SqPath;
@@ -20,13 +19,32 @@ pub struct SqFile<R: Read + Seek> {
 }
 
 impl SqFile<File> {
-    pub fn open_sqpack<SQ, P>(sqpath: SQ, sqpack: P) -> SqResult<SqFile<File>>
+    pub fn open_sqpath<SQ, P>(sqpath: SQ, sqpack: P) -> SqResult<SqFile<File>>
         where SQ: AsRef<SqPath>, P: AsRef<Path>
     {
         let sqpath = sqpath.as_ref();
         let sqpack = sqpack.as_ref();
 
-        unimplemented!()
+        let index_hash = sqpath.sq_index_hash().ok_or(SqpackError::SqFileNotFound)?;
+        let mut index_path = sqpath.sqpack_index_path(sqpack).ok_or(SqpackError::SqFileNotFound)?;
+
+        let mut index_reader = IndexReader::new(File::open(index_path.as_path())?)?;
+        let mut entry_opt = None;
+        for file_res in index_reader.files()? {
+            let file = file_res?;
+            if file.path_hash == index_hash {
+                entry_opt = Some(file);
+                break;
+            }
+        }
+        let entry = entry_opt.ok_or(SqpackError::SqFileNotFound)?;
+        let mut ext = [0x64u8, 0x61, 0x74, 0x30];
+        ext[3] += entry.dat_file;
+        let utf8_err: IOError = ErrorKind::InvalidData.into();
+        let ext = std::str::from_utf8(&ext).map_err(|e| utf8_err)?;
+        index_path.set_extension(ext);
+        let dat_file = File::open(index_path)?;
+        Self::open_reader(dat_file, entry)
     }
 }
 
@@ -61,7 +79,7 @@ impl<R: Read + Seek> SqFile<R> {
             data.set_len(final_length as usize);
             data.into_boxed_slice()
         };
-        self.inner.read_exact(&mut data);
+        self.inner.read_exact(&mut data)?;
         let data = Cursor::new(data);
         Ok(if is_compressed {
             ReadingBlock::Compressed(CompressedReadingBlock { decoder: DeflateDecoder::new(data ) })
