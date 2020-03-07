@@ -96,10 +96,10 @@ impl<R: Read + Seek> IndexReader<R> {
                     cache: Default::default(),
                 })
             } else {
-                Err(SqpackError::ReaderIsNotIndex)
+                Err(SqpackError::IndexReaderIsNotIndex)
             }
         } else {
-            Err(SqpackError::ReaderIsNotSqPack)
+            Err(SqpackError::IndexReaderIsNotIndex)
         }
     }
 
