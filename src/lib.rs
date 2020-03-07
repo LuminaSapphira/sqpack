@@ -31,3 +31,13 @@ mod hash_consts;
 pub mod error;
 
 pub use sqpath::SqPath;
+
+/// Utility function to create a buffer with the specified size
+pub(crate) fn buffer(size: usize) -> Box<[u8]> {
+    let mut buf = Vec::with_capacity(size);
+    let buf = unsafe {
+        buf.set_len(size);
+        buf.into_boxed_slice()
+    };
+    buf
+}

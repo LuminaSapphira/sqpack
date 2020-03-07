@@ -145,8 +145,8 @@ impl<R: Read + Seek> SqFile<R> {
 
     /// Retrieves the resulting size of this file stored within the SqPack.
     /// This can be used to prepare an in-memory buffer.
-    pub fn total_size(&self) -> u64 {
-        self.dat_info.uncompressed_size as u64
+    pub fn total_size(&self) -> usize {
+        self.dat_info.uncompressed_size as usize
     }
 
 }
@@ -253,13 +253,11 @@ impl DatInfo {
         where R: Read + Seek
     {
         reader.seek(SeekFrom::Start(index_entry.data_offset as u64))?;
-
         let mut buffer = {
-            let mut buffer = Vec::with_capacity(24);
-            reader.read_exact(buffer.as_mut_slice())?;
-            Cursor::new(buffer.into_boxed_slice())
+            let mut buf = crate::buffer(24);
+            reader.read_exact(buf.as_mut())?;
+            Cursor::new(buf)
         };
-
         let header_len = buffer.read_u32::<LE>()?;
         let content_type: ContentType = buffer.read_u32::<LE>()?.try_into()?;
         let uncompressed_size = buffer.read_u32::<LE>()?;
@@ -298,9 +296,9 @@ fn read_block_table_entries<R>(reader: &mut R, index_entry: &IndexFileEntry, dat
     let mut buffer = {
         let buf_size = 8 * dat_info.blocks_len as usize;
         // create a buffer for all the blocks and read in all at once
-        let mut buffer = Vec::with_capacity(buf_size);
-        reader.read_exact(buffer.as_mut_slice())?;
-        Cursor::new(buffer.into_boxed_slice())
+        let mut buffer = crate::buffer(buf_size);
+        reader.read_exact(buffer.as_mut())?;
+        Cursor::new(buffer)
     };
 
     // read the blocks
