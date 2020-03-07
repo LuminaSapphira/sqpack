@@ -16,3 +16,4 @@ flate2 = "1.0"
 
 [dev-dependencies]
 walkdir = "2.2"
+md5 = "0.7.0"

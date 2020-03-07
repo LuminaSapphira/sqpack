@@ -1,5 +1,6 @@
 extern crate sqpack;
 extern crate walkdir;
+extern crate md5;
 
 const FFXIV_SQPACK_PATH: &'static str = "FFXIV_SQPACK_PATH";
 
@@ -8,7 +9,7 @@ use sqpack::SqPath;
 use std::collections::HashMap;
 use std::env;
 use std::fs::{File, FileType};
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Read};
 
 fn get_env_vars() -> HashMap<String, String> {
     env::vars().collect()
@@ -77,8 +78,28 @@ fn index_reader_iterators() {
     assert_ne!(indices, 0, "Didn't read any indices");
 }
 
-//#[test]
-//fn open_file() {
-//    let path = &get_env_vars()[FFXIV_SQPACK_PATH];
-//    sqpack::SqFile::open("music/ffxiv/BGM_System_Title.scd", path).unwrap();
-//}
+#[test]
+fn open_file() {
+    use sqpack::io::dat::SqFile;
+
+    let sqpack = &get_env_vars()[FFXIV_SQPACK_PATH];
+    let sqpath = "music/ffxiv/BGM_System_Title.scd";
+    SqFile::open_sqpath(sqpath, sqpack).expect("Opening file");
+}
+
+#[test]
+fn read_file() {
+    use sqpack::io::dat::SqFile;
+
+    let sqpack = &get_env_vars()[FFXIV_SQPACK_PATH];
+    let sqpath = "music/ffxiv/BGM_System_Title.scd";
+    let mut sqfile = SqFile::open_sqpath(sqpath, sqpack).expect("Opening file");
+    let mut data = Vec::with_capacity(sqfile.total_size());
+    sqfile.read_to_end(&mut data).expect("Reading");
+
+    let expected: [u8; 16] = [0x43, 0x51, 0x52, 0x41, 0xA8, 0xE7, 0x8E, 0xCC, 0xD5, 0xE1, 0xB3, 0x3A, 0xBE, 0x89, 0xDB, 0xCC];
+    let digest = md5::compute(data).0;
+    assert_eq!(expected, digest, "File not equal to expected file!")
+
+}
+
