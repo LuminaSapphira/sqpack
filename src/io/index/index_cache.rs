@@ -2,6 +2,7 @@ use io::index::IndexReader;
 use std::collections::HashMap;
 use std::io::{Read, Seek};
 use crate::error::SqResult;
+use sqpath::SqIndexHash;
 
 /// An in-memory cache of a single .index file. Recommended for reading many files all from the
 /// same index.
@@ -20,11 +21,9 @@ pub struct IndexFolderEntry {
 /// A file entry within the index cache. Can be used to locate the file data within the .dat files.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub struct IndexFileEntry {
-    /// The folder hash of the file path
-    pub folder_hash: u32,
 
-    /// The file hash of the file path
-    pub file_hash: u32,
+    /// The hash of this entry
+    pub path_hash: SqIndexHash,
 
     /// Where in the .dat file the data may be found
     pub data_offset: u32,
@@ -49,7 +48,7 @@ impl IndexCache {
             let mut files = HashMap::with_capacity(folder.files_count as usize);
             for file in reader.folder_contents(&folder)? {
                 let file = file?;
-                files.insert(file.file_hash, file);
+                files.insert(file.path_hash.file_hash, file);
             }
             folder_map.insert(
                 folder.folder_hash,

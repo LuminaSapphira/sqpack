@@ -3,6 +3,7 @@ use crate::seek_bufread::BufReader;
 use io::index::IndexFileEntry;
 use std::io::{Read, Seek, SeekFrom};
 use crate::error::{SqResult, SqpackError};
+use sqpath::SqIndexHash;
 
 #[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Ord, Eq, Hash, Default)]
 struct CachedInfo {
@@ -219,8 +220,10 @@ impl<R: Read + Seek> IndexReader<R> {
         let data_offset = ((offset & 0xfffffff8) << 3) as u32;
         self.inner.read_u32::<LE>()?;
         Ok(IndexFileEntry {
-            file_hash,
-            folder_hash,
+            path_hash: SqIndexHash {
+                file_hash,
+                folder_hash,
+            },
             dat_file,
             data_offset,
         })

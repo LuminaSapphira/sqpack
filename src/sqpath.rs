@@ -143,9 +143,12 @@ impl Deref for SqPathBuf {
 }
 
 /// A simple struct that names the parts of a hashed Sqpack Index file path
-#[derive(Copy, Clone, Eq, PartialEq, Debug)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub struct SqIndexHash {
+    /// The folder hash of the file path
     pub folder_hash: u32,
+
+    /// The file hash of the file path
     pub file_hash: u32,
 }
 
