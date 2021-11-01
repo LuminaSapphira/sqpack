@@ -1,5 +1,5 @@
 #![deny(unused_extern_crates, unused_must_use)]
-#![forbid(intra_doc_link_resolution_failure)]
+#![forbid(rustdoc::broken_intra_doc_links)]
 
 //! A simple crate for reading the data files of FFXIV.
 //!
@@ -12,10 +12,6 @@
 //! one would start with a `SqPath` / `SqPathBuf`, pass that to a
 //! function in the `io` module, along with a path to the data files, to
 //! open `Read` streams.
-
-extern crate byteorder;
-extern crate seek_bufread;
-extern crate flate2;
 
 /// Types and functions related to locating data within the Sqpack
 pub mod sqpath;

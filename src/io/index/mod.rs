@@ -1,5 +1,7 @@
 mod index_cache;
 mod reader;
 
-pub use self::index_cache::{IndexCache, IndexFileEntry, IndexFolderEntry};
-pub use self::reader::{IndexFiles, IndexReader};
+pub use self::{
+    index_cache::{IndexCache, IndexFileEntry, IndexFolderEntry},
+    reader::{IndexFiles, IndexReader},
+};

@@ -1,8 +1,8 @@
 use std::convert::TryFrom;
-use error::SqpackError;
 
 mod sqfile;
 pub use self::sqfile::SqFile;
+use crate::error::SqpackError;
 
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 /// The type of content stored within a file stored within a .dat file of a SqPack
@@ -26,7 +26,7 @@ impl TryFrom<u32> for ContentType {
             2 => Ok(ContentType::Binary),
             // 3 => Ok(ContentType::Model),
             // 4 => Ok(ContentType::Texture),
-            unk => Err(SqpackError::UnknownContentType(unk))
+            unk => Err(SqpackError::UnknownContentType(unk)),
         }
     }
 }

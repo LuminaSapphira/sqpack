@@ -1,7 +1,9 @@
 use crate::hash;
-use std::borrow::Borrow;
-use std::ops::Deref;
-use std::path::{Path, PathBuf};
+use std::{
+    borrow::Borrow,
+    ops::Deref,
+    path::{Path, PathBuf},
+};
 
 #[derive(Ord, PartialOrd, Eq, PartialEq, Debug, Hash)]
 /// A representation of a location within the FFXIV data files. This is an
@@ -100,9 +102,7 @@ impl SqPath {
     }
 
     /// Returns this path as a reference to a string
-    pub fn as_str(&self) -> &str {
-        &self.inner
-    }
+    pub fn as_str(&self) -> &str { &self.inner }
 }
 
 #[derive(Ord, PartialOrd, PartialEq, Eq, Debug, Hash, Clone)]
@@ -137,9 +137,7 @@ impl SqPathBuf {
 
 impl Deref for SqPathBuf {
     type Target = SqPath;
-    fn deref(&self) -> &SqPath {
-        self.as_ref()
-    }
+    fn deref(&self) -> &SqPath { self.as_ref() }
 }
 
 /// A simple struct that names the parts of a hashed Sqpack Index file path
@@ -385,47 +383,34 @@ impl SqPackNumber {
 }
 
 impl AsRef<SqPath> for str {
-    fn as_ref(&self) -> &SqPath {
-        SqPath::new(self)
-    }
+    fn as_ref(&self) -> &SqPath { SqPath::new(self) }
 }
 
 impl AsRef<SqPath> for &SqPath {
-    fn as_ref(&self) -> &SqPath {
-        self
-    }
+    fn as_ref(&self) -> &SqPath { self }
 }
 
 impl AsRef<SqPath> for String {
-    fn as_ref(&self) -> &SqPath {
-        SqPath::new(self.as_str())
-    }
+    fn as_ref(&self) -> &SqPath { SqPath::new(self.as_str()) }
 }
 
 impl AsRef<SqPath> for SqPathBuf {
-    fn as_ref(&self) -> &SqPath {
-        self.inner.as_ref()
-    }
+    fn as_ref(&self) -> &SqPath { self.inner.as_ref() }
 }
 
 impl ToOwned for SqPath {
     type Owned = SqPathBuf;
-    fn to_owned(&self) -> Self::Owned {
-        SqPathBuf::new(&self.inner)
-    }
+    fn to_owned(&self) -> Self::Owned { SqPathBuf::new(&self.inner) }
 }
 
 impl Borrow<SqPath> for SqPathBuf {
-    fn borrow(&self) -> &SqPath {
-        SqPath::new(&self.inner)
-    }
+    fn borrow(&self) -> &SqPath { SqPath::new(&self.inner) }
 }
 
 #[cfg(test)]
 mod sqpath_tests {
-    use sqpath::{Expansion, FileType, SqPackNumber, SqPathBuf};
+    use crate::sqpath::{Expansion, FileType, SqPackNumber, SqPath, SqPathBuf};
     use std::borrow::Borrow;
-    use SqPath;
 
     #[test]
     fn basic_sqpath() {

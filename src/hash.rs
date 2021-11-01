@@ -76,7 +76,7 @@ pub fn compute_str_lower<S: AsRef<str> + ?Sized>(val: &S) -> u32 {
 
 #[cfg(test)]
 mod hash_tests {
-    use hash;
+    use crate::hash;
 
     #[test]
     fn case_eq() {
@@ -109,5 +109,4 @@ mod hash_tests {
         assert_eq!(hash::compute_str("music/ffxiv"), 0x0AF269D6);
         assert_eq!(hash::compute_str_lower("music/ffxiv"), 0x0AF269D6);
     }
-
 }

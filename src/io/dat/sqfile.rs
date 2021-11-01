@@ -1,14 +1,20 @@
-use std::io::{Seek, Read, SeekFrom, Error as IOError, Cursor, ErrorKind};
-use io::index::{IndexFileEntry, IndexReader};
-use error::{SqResult, SqpackError};
-use io::dat::ContentType;
-use byteorder::{LE, ReadBytesExt};
-use std::convert::TryInto;
+use crate::{
+    error::{SqResult, SqpackError},
+    io::{
+        dat::ContentType,
+        index::{IndexFileEntry, IndexReader},
+    },
+    SqPath,
+};
+use byteorder::{ReadBytesExt, LE};
 use flate2::bufread::DeflateDecoder;
-use std::vec::IntoIter as VecIntoIter;
-use std::fs::File;
-use SqPath;
-use std::path::Path;
+use std::{
+    convert::TryInto,
+    fs::File,
+    io::{Cursor, Error as IOError, ErrorKind, Read, Seek, SeekFrom},
+    path::Path,
+    vec::IntoIter as VecIntoIter,
+};
 
 /// Allows reading files within a SqPack using Rust's [`Read`][read]
 /// trait. Within the SqPack, files are compressed, so there is necessarily
@@ -32,13 +38,17 @@ impl SqFile<File> {
     /// Opens a file within the SqPack from a [`SqPath`](../../../sqpath/struct.SqPath.html).
     /// Also needs a path to the SqPack directory on the OS.
     pub fn open_sqpath<SQ, P>(sqpath: SQ, sqpack: P) -> SqResult<SqFile<File>>
-        where SQ: AsRef<SqPath>, P: AsRef<Path>
+    where
+        SQ: AsRef<SqPath>,
+        P: AsRef<Path>,
     {
         let sqpath = sqpath.as_ref();
         let sqpack = sqpack.as_ref();
 
         let index_hash = sqpath.sq_index_hash().ok_or(SqpackError::SqFileNotFound)?;
-        let mut index_path = sqpath.sqpack_index_path(sqpack).ok_or(SqpackError::SqFileNotFound)?;
+        let mut index_path = sqpath
+            .sqpack_index_path(sqpack)
+            .ok_or(SqpackError::SqFileNotFound)?;
 
         // Open a reader to find the right file
         let mut index_reader = IndexReader::new(File::open(index_path.as_path())?)?;
@@ -65,7 +75,6 @@ impl SqFile<File> {
 }
 
 impl<R: Read + Seek> SqFile<R> {
-
     /// Opens a file within the SqPack given a .dat reader. If the passed index
     /// entry is not found within this dat file, you will get corrupted data,
     /// or more likely just get errors on reading.
@@ -73,7 +82,13 @@ impl<R: Read + Seek> SqFile<R> {
         let mut reader = reader;
         let dat_info = DatInfo::read_header(&mut reader, &index_entry)?;
         let blocks = read_block_table_entries(&mut reader, &index_entry, &dat_info)?.into_iter();
-        Ok(SqFile { inner: reader, index_entry, blocks, current_block: None, dat_info})
+        Ok(SqFile {
+            inner: reader,
+            index_entry,
+            blocks,
+            current_block: None,
+            dat_info,
+        })
     }
 
     /// Reopens this SqFile reader on a new index file, without having to construct
@@ -82,7 +97,8 @@ impl<R: Read + Seek> SqFile<R> {
         let mut slf = self;
         slf.dat_info = DatInfo::read_header(&mut slf.inner, &index_entry)?;
         slf.current_block = None;
-        slf.blocks = read_block_table_entries(&mut slf.inner, &index_entry, &slf.dat_info)?.into_iter();
+        slf.blocks =
+            read_block_table_entries(&mut slf.inner, &index_entry, &slf.dat_info)?.into_iter();
         slf.index_entry = index_entry;
         Ok(slf)
     }
@@ -104,26 +120,29 @@ impl<R: Read + Seek> SqFile<R> {
         let compressed_len = cursor.read_u32::<LE>()?;
         let decompressed_len = cursor.read_u32::<LE>()?;
 
-
         // According to datamining research, if the compressed_len is < 32000,
         // it is compressed. Otherwise it should be exactly 32000
         let is_compressed = compressed_len < 32000;
-        if !is_compressed && compressed_len != 32000 { return Err(IOError::from(ErrorKind::InvalidData)); }
+        if !is_compressed && compressed_len != 32000 {
+            return Err(IOError::from(ErrorKind::InvalidData));
+        }
 
         // Determine the length of the data to read from the file
-        let final_length =
-            if is_compressed {
-                if (entry.block_size as u32 + block_header_len) % BLOCK_PADDING != 0 {
-                    compressed_len + BLOCK_PADDING - ((entry.block_size as u32 - block_header_len) % BLOCK_PADDING)
-                } else { compressed_len }
+        let final_length = if is_compressed {
+            if (entry.block_size as u32 + block_header_len) % BLOCK_PADDING != 0 {
+                compressed_len + BLOCK_PADDING
+                    - ((entry.block_size as u32 - block_header_len) % BLOCK_PADDING)
             } else {
-                decompressed_len
-            };
+                compressed_len
+            }
+        } else {
+            decompressed_len
+        };
 
         // Create a buffer by creating a Vec and converting it into a boxed slice
         // This unsafe call uses the exact same strategy as std's BufReader
         let mut data = Vec::with_capacity(final_length as usize);
-        let mut data= unsafe {
+        let mut data = unsafe {
             data.set_len(final_length as usize);
             data.into_boxed_slice()
         };
@@ -132,23 +151,20 @@ impl<R: Read + Seek> SqFile<R> {
         self.inner.read_exact(&mut data)?;
         let data = Cursor::new(data);
         Ok(if is_compressed {
-            ReadingBlock::Compressed(CompressedReadingBlock { decoder: DeflateDecoder::new(data ) })
+            ReadingBlock::Compressed(CompressedReadingBlock {
+                decoder: DeflateDecoder::new(data),
+            })
         } else {
             ReadingBlock::Uncompressed(UncompressedReadingBlock { buffer: data })
         })
     }
 
     /// Retrieves the kind of content stored within this .dat file
-    pub fn content_type(&self) -> ContentType {
-        self.dat_info.content_type
-    }
+    pub fn content_type(&self) -> ContentType { self.dat_info.content_type }
 
     /// Retrieves the resulting size of this file stored within the SqPack.
     /// This can be used to prepare an in-memory buffer.
-    pub fn total_size(&self) -> usize {
-        self.dat_info.uncompressed_size as usize
-    }
-
+    pub fn total_size(&self) -> usize { self.dat_info.uncompressed_size as usize }
 }
 
 /// The padding between the block header and the block data
@@ -170,8 +186,7 @@ impl<R: Read + Seek> Read for SqFile<R> {
                         self.current_block.replace(reading_block);
                         let r = self.read(buf)?;
                         Ok(r)
-                    }
-                    else {
+                    } else {
                         // if there was no other block, we're done
                         self.current_block = None;
                         Ok(0)
@@ -202,7 +217,7 @@ enum ReadingBlock {
     /// A DEFLATE compressed block
     Compressed(CompressedReadingBlock),
     /// An uncompressed block
-    Uncompressed(UncompressedReadingBlock)
+    Uncompressed(UncompressedReadingBlock),
 }
 
 /// Wraps a deflate decoder over a buffer of the block
@@ -220,22 +235,17 @@ impl Read for ReadingBlock {
     fn read(&mut self, buf: &mut [u8]) -> Result<usize, IOError> {
         match self {
             ReadingBlock::Compressed(c) => c.read(buf),
-            ReadingBlock::Uncompressed(u) => u.read(buf)
+            ReadingBlock::Uncompressed(u) => u.read(buf),
         }
     }
 }
 
 impl Read for CompressedReadingBlock {
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize, IOError> {
-        self.decoder.read(buf)
-    }
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, IOError> { self.decoder.read(buf) }
 }
 
 impl Read for UncompressedReadingBlock {
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize, IOError> {
-        self.buffer.read(buf)
-    }
-
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, IOError> { self.buffer.read(buf) }
 }
 
 /// Information about the file (the data header)
@@ -243,14 +253,15 @@ struct DatInfo {
     pub header_len: u32,
     pub content_type: ContentType,
     pub uncompressed_size: u32,
-    pub blocks_len: u32
+    pub blocks_len: u32,
 }
 
 impl DatInfo {
     /// Reads the header from a reader given that its opened to a .dat file with the
     /// provided index entry contained.
     pub(crate) fn read_header<R>(reader: &mut R, index_entry: &IndexFileEntry) -> SqResult<DatInfo>
-        where R: Read + Seek
+    where
+        R: Read + Seek,
     {
         reader.seek(SeekFrom::Start(index_entry.data_offset as u64))?;
         let mut buffer = {
@@ -264,7 +275,7 @@ impl DatInfo {
         buffer.seek(SeekFrom::Current(8))?;
         let blocks_len = buffer.read_u32::<LE>()?;
 
-        Ok(DatInfo{
+        Ok(DatInfo {
             header_len,
             content_type,
             uncompressed_size,
@@ -283,14 +294,23 @@ struct BlockTableEntry {
 
 /// Take a reader and an index entry and the SqFile's header info and read the block
 /// table to produce a vector over the block information.
-fn read_block_table_entries<R>(reader: &mut R, index_entry: &IndexFileEntry, dat_info: &DatInfo) -> SqResult<Vec<BlockTableEntry>>
-    where R: Read + Seek
+fn read_block_table_entries<R>(
+    reader: &mut R,
+    index_entry: &IndexFileEntry,
+    dat_info: &DatInfo,
+) -> SqResult<Vec<BlockTableEntry>>
+where
+    R: Read + Seek,
 {
     reader.seek(SeekFrom::Start(index_entry.data_offset as u64 + 24))?;
 
     let mut blocks = Vec::with_capacity(dat_info.blocks_len as usize);
 
-    assert_eq!(dat_info.content_type, ContentType::Binary, "The content type is unsupported.");
+    assert_eq!(
+        dat_info.content_type,
+        ContentType::Binary,
+        "The content type is unsupported."
+    );
     // TODO implement support for other content types
 
     let mut buffer = {

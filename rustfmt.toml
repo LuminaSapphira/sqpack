@@ -1,0 +1,2 @@
+imports_granularity = "Crate"
+fn_single_line = true

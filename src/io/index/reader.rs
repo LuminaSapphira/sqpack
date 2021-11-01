@@ -1,9 +1,11 @@
-use crate::byteorder::{ReadBytesExt, LE};
-use crate::seek_bufread::BufReader;
-use io::index::IndexFileEntry;
+use crate::{
+    error::{SqResult, SqpackError},
+    io::index::IndexFileEntry,
+    sqpath::SqIndexHash,
+};
+use byteorder::{ReadBytesExt, LE};
+use seek_bufread::BufReader;
 use std::io::{Read, Seek, SeekFrom};
-use crate::error::{SqResult, SqpackError};
-use sqpath::SqIndexHash;
 
 #[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Ord, Eq, Hash, Default)]
 struct CachedInfo {
@@ -77,9 +79,7 @@ impl<R: Read + Seek> IndexReader<R> {
     /// # Returns
     /// `Ok(IndexReader)` if `inner` was a `Read` over a SqPack index file
     /// `Err(...)` if an I/O error occurred or if `inner` was not a `Read` over a SqPack index file.
-    pub fn new(inner: R) -> SqResult<Self> {
-        Self::with_capacity(16384, inner)
-    }
+    pub fn new(inner: R) -> SqResult<Self> { Self::with_capacity(16384, inner) }
 
     /// Creates and `IndexReader` with the specified capacity. See `IndexReader::new`.
     pub fn with_capacity(cap: usize, inner: R) -> SqResult<Self> {
