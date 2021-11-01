@@ -23,6 +23,9 @@ pub mod sqpath;
 /// Types and functions related to reading data from the Sqpack
 pub mod io;
 
+/// Module for decoding SCD music files
+pub mod scd;
+
 /// Functions relating to hashing data in the same way as FFXIV to assist locating files.
 pub mod hash;
 mod hash_consts;

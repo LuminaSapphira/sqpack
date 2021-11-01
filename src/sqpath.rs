@@ -279,6 +279,7 @@ pub enum Expansion {
     Heavensward,
     Stormblood,
     Shadowbringers,
+    Endwalker,
 }
 
 impl Expansion {
@@ -299,6 +300,7 @@ impl Expansion {
                 "ex1" => Some(Expansion::Heavensward),
                 "ex2" => Some(Expansion::Stormblood),
                 "ex3" => Some(Expansion::Shadowbringers),
+                "ex4" => Some(Expansion::Endwalker),
                 _ => None,
             })
     }
@@ -312,6 +314,7 @@ impl Expansion {
             Expansion::Heavensward => "01",
             Expansion::Stormblood => "02",
             Expansion::Shadowbringers => "03",
+            Expansion::Endwalker => "04",
         }
     }
 
@@ -322,6 +325,7 @@ impl Expansion {
             Expansion::Heavensward => 0x01u8,
             Expansion::Stormblood => 0x02u8,
             Expansion::Shadowbringers => 0x03u8,
+            Expansion::Endwalker => 0x04u8,
         }
     }
 
@@ -332,6 +336,7 @@ impl Expansion {
             Expansion::Heavensward => "ex1",
             Expansion::Stormblood => "ex2",
             Expansion::Shadowbringers => "ex3",
+            Expansion::Endwalker => "ex4",
         }
     }
 }
